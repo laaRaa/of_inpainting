@@ -253,9 +253,11 @@ static void inf_harmonic_extension_with_init(
                 int scale_num    // total number of scales
 		)
 {
+	// unused parameter
+	(void) err_thresh;
+
 	// build list of masked pixels
 	int nmask, (*mask)[2] = build_mask(&nmask, x, w, h);
-        float err_thresh_aux = err_thresh; // relax threshold value for convergence in coarser scales
 
 	// initialize the solution to the given data at the masked pixels
 	for (int i = 0; i < w*h; i++)
@@ -269,13 +271,13 @@ static void inf_harmonic_extension_with_init(
           /* while (counter < niter && err[0] > err_thresh) */
           while (counter < niter)
           {
-            float u = amle_iteration(y, dist, w, h, mask, nmask, err, nn_type);
+            amle_iteration(y, dist, w, h, mask, nmask, err, nn_type);
             counter += 1;
           }
         else
           while (counter < niter)
           {
-            float u = amle_iteration(y, dist, w, h, mask, nmask, err, nn_type);
+            amle_iteration(y, dist, w, h, mask, nmask, err, nn_type);
             counter += 1;
           }
 
@@ -340,7 +342,7 @@ static float bilinear_interpolation(float *x, int w, int h, float p, float q, in
 static void zoom_in_by_factor_two(float *out, int ow, int oh,
 		float *in, int iw, int ih, int pd)
 {
-	getpixel_operator p = getpixel_1;
+	//getpixel_operator p = getpixel_1;
 	assert(abs(2*iw-ow) < 2);
 	assert(abs(2*ih-oh) < 2);
         for (int l = 0; l < pd; l++)
@@ -578,22 +580,22 @@ int main(int argc, char *argv[])
 	char *filename_guide = argv[10];
 
         // check distance type validity
-        if (dist_type<0 | dist_type>3)
-          return printf("The distance type shoulb be 0, 1, 2 or 3\n");
+        if (dist_type<0 || dist_type>3)
+          return printf("The distance type should be 0, 1, 2 or 3\n");
 
         // check neighbourhood type validity
-        if (nn_type<1 | nn_type>3)
-          return printf("The neighbourhood type shoulb be  1, 2 or 3\n");
+        if (nn_type<1 || nn_type>3)
+          return printf("The neighbourhood type should be  1, 2 or 3\n");
 
         int nn = AMLE_NN();
         if (nn_type==1)
-          if (nn!=4 & nn!=8 & nn!=16 & nn!=24 & nn!=32)
+          if (nn!=4 && nn!=8 && nn!=16 && nn!=24 && nn!=32)
             return fprintf(stderr, "neighbourhood_type = 1 --> AMLE_NN = 4,8,16,24,32\n");
         if (nn_type==2)
-          if (nn!=4 & nn!=8 & nn!=24 & nn!=48 & nn!=80 & nn!=120)
+          if (nn!=4 && nn!=8 && nn!=24 && nn!=48 && nn!=80 && nn!=120)
             return fprintf(stderr, "neighbourhood_type = 2 --> AMLE_NN = 4,8,24,48,80,120\n");
         if (nn_type==3)
-          if (nn!=8 & nn!=16 & nn!=24 & nn!=40 & nn!=48)
+          if (nn!=8 && nn!=16 && nn!=24 && nn!=40 && nn!=48)
             return fprintf(stderr, "neighbourhood_type = 3 --> AMLE_NN = 8,16,24,40,48\n");
 
 	int w[3], h[3], pd[3];

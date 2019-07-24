@@ -1,7 +1,10 @@
+CFLAGS ?= -O3 -march=native
+LDLIBS  = -lpng -ltiff -ljpeg -lm
 
-amle_recsep: amle_recsep.c iio.c iio.h smapa.h
-	cc -O3 -o amle_recsep amle_recsep.c iio.c -lpng -ltiff -ljpeg -lm
+BIN = amle_recsep
+OBJ = amle_recsep.o iio.o
 
-clean:
-	rm -f amle_recsep output.flo
+$(BIN) : $(OBJ)
+
+clean: ; $(RM) $(BIN) $(OBJ)
 
