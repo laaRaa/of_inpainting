@@ -266,9 +266,11 @@ static void inf_harmonic_extension_with_init(
                 int scale_num    // total number of scales
 		)
 {
+	// unused parameter
+	(void) err_thresh;
+
 	// build list of masked pixels
 	int nmask, (*mask)[2] = build_mask(&nmask, x, w, h);
-        float err_thresh_aux = err_thresh; // relax threshold value for convergence in coarser scales
 
 	// initialize result of u at it (k-1)
 	float *y_old = xmalloc(w*h*sizeof*y_old);
@@ -286,7 +288,6 @@ static void inf_harmonic_extension_with_init(
 	// do the requested iterations
 	while (count < niter && e_k > err_thresh)
 	{
-
 		float u = amle_iteration(y, dist, w, h, mask, nmask, nn_type, nn);
 		float diff = 0;
 		for (int i=0; i<w*h; i++)
@@ -359,7 +360,7 @@ static float bilinear_interpolation(float *x, int w, int h, float p, float q, in
 static void zoom_in_by_factor_two(float *out, int ow, int oh,
 		float *in, int iw, int ih, int pd)
 {
-	getpixel_operator p = getpixel_1;
+	//getpixel_operator p = getpixel_1;
 	assert(abs(2*iw-ow) < 2);
 	assert(abs(2*ih-oh) < 2);
         for (int l = 0; l < pd; l++)
