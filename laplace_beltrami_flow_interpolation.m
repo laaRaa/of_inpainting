@@ -14,10 +14,22 @@
 % You should have received a copy of the GNU Affero General Public License
 % along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-function B = grid_incidence_4N(w, h)                     % grid graph WxH
+% laplace beltrami flow interpolation
+% function []=laplace_beltrami_flow_interpolation(input, output, lambda, g)
+% input_flow: texture sample path
+% mask: inpainting mask path
+% guide: guiding image path
+% output_flow: synthesized texture path
+% lambda: anisotropic weight
+% g: metric
 
-x = sparse(1:w-1, 2:w, 1, w-1, w) - speye(w-1,w);   % path of length W
-y = sparse(1:h-1, 2:h, 1, h-1, h) - speye(h-1,h);   % path of length H
-B = [ kron(speye(h),x) ; kron(y,speye(w)) ];  % kronecker union - incidence
-% matrix for 4 connectivity
-end
+function laplace_beltrami_flow_interpolation(flow_in, mask, guide,...
+    flow_out, lambda, g)
+
+kappa = im2double(imread(mask)); % read inpainting mask
+kappa = kappa(:,:,1); % 
+kappa(kappa~=0) = 1; % values ~= 0 are pixels to inpaint
+I = im2double(imread(guide)); % read guiding image
+v = readFlowFile(flow_in); % read ground truth flow
+u = inpaint_flow(v,I,kappa,lambda,g); % inpaint missing regions
+writeFlowFile(u,flow_out)

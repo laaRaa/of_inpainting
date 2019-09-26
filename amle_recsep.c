@@ -1,9 +1,26 @@
+/* Copyright (c) 2019 Lara Raad <lara.raad@upf.edu>,
+			     <enric.meinhardt@cmla.ens-cachan.fr>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+Smooth Contours is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program. If not, see <http://www.gnu.org/licenses/>. */
+
 #include <assert.h>
 #include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "smapa.h"
 
 #define MIN(a,b) ( (a)<(b) ? (a) : (b) )
 #define MAX(a,b) ( (a)>(b) ? (a) : (b) )
@@ -65,12 +82,8 @@ static int (*build_mask(int *out_nmask, float *x, int w, int h))[2]
   return mask;
 }
 
-#include "smapa.h"
-SMART_PARAMETER_SILENT(AMLE_NN,8)
-
-  static int(*get_neighbours(int nn_type))[2]
+  static int(*get_neighbours(int nn_type, int nn))[2]
 {
-  int nn = AMLE_NN();
   int (*n)[2] = xmalloc(nn*2*sizeof(int));
 
   assert( nn_type==1 || nn_type==2 || nn_type==3 );
@@ -78,15 +91,23 @@ SMART_PARAMETER_SILENT(AMLE_NN,8)
   if (nn_type==1)
   {
     int p[][2] = { // {x, y}
-      {+1,0}, {0,+1}, {-1,0}, {0,-1}, // 4-connexity
-      {+1,+1}, {-1,-1}, // 6-connexity
-      {-1,+1}, {+1,-1}, // 8-connexity
+      {+1,0}, {0,+1}, {-1,0}, {0,-1},
+      {+1,+1}, {-1,-1}, {-1,+1}, {+1,-1}, // 8-neighbors, dx=sqrt(2)
       {+2,+1}, {+1,+2}, {+2,-1}, {+1,-2},
-      {-2,-1}, {-1,-2}, {-2,+1}, {-1,+2}, // 16-neighbors
+      {-2,-1}, {-1,-2}, {-2,+1}, {-1,+2}, // 16-neighbors, dx = sqrt(3)
       {+3,+1}, {+1,+3}, {+3,-1}, {+1,-3},
-      {-3,-1}, {-1,-3}, {-3,+1}, {-1,+3}, // 24-neighbors
+      {-3,-1}, {-1,-3}, {-3,+1}, {-1,+3},
       {+3,+2}, {+2,+3}, {+3,-2}, {+2,-3},
-      {-3,-2}, {-2,-3}, {-3,+2}, {-2,+3}, // 32-neighbors
+      {-3,-2}, {-2,-3}, {-3,+2}, {-2,+3}, // 32-neighbors, dx = sqrt(5)
+      {+4,+1}, {+4,+2}, {+4,+3},{+4,-1}, {+4,-2}, {+4,-3},
+      {-4,+1}, {-4,+2}, {-4,+3},{-4,-1}, {-4,-2}, {-4,-3},
+      {+1,+4}, {+2,+4}, {+3,+4},{-1,+4}, {-2,+4}, {-3,+4},
+      {+1,-4}, {+2,-4}, {+3,-4},{-1,-4}, {-2,-4}, {-3,-4}, // 56-neighbors, dx=sqrt(7)
+      {+5,+1}, {+5,+2}, {+5,+3},{+5,+4},{+5,-1}, {+5,-2}, {+5,-3},{+5,-4},
+      {-5,+1}, {-5,+2}, {-5,+3},{-5,+4},{-5,-1}, {-5,-2}, {-5,-3},{-5,-4},
+      {+1,+5}, {+2,+5}, {+3,+5},{+4,+5},{-1,+5}, {-2,+5}, {-3,+5},{-4,+5},
+      {+1,-5}, {+2,-5}, {+3,-5},{+4,-5},{-1,-5}, {-2,-5}, {-3,-5},{-4,-5}, // 88-neighbors, dx = 3
+
     };
     assert( nn >= 0 && nn <= 32 );
     for (int i = 0; i < nn; i++)
@@ -98,18 +119,17 @@ SMART_PARAMETER_SILENT(AMLE_NN,8)
   else // nn_type 2 or 3
   {
     int p[][2] = { // {x, y}
-      {+1,0}, {0,+1}, {-1,0}, {0,-1}, // 4-connexity
-      {+1,+1}, {-1,-1}, // 6-connexity
-      {-1,+1}, {+1,-1}, // 8-connexity
+      {+1,0}, {0,+1}, {-1,0}, {0,-1},
+      {+1,+1}, {-1,-1}, {-1,+1}, {+1,-1}, // 8-neighbors, dx=sqrt(2)
       {+2,+1}, {+1,+2}, {+2,-1}, {+1,-2}, {+2,0}, {+2,+2}, {+2,-2},
       {-2,-1}, {-1,-2}, {-2,+1}, {-1,+2}, {-2,0}, {-2,-2}, {-2,+2},
-      {0,-2}, {0,+2}, // 24-neighbours
+      {0,-2}, {0,+2}, // 24-neighbors, dx = 2
       {+3,+1}, {+1,+3}, {+3,-1}, {+1,-3},
       {-3,-1}, {-1,-3}, {-3,+1}, {-1,+3},
       {+3,+2}, {+2,+3}, {+3,-2}, {+2,-3},
       {-3,-2}, {-2,-3}, {-3,+2}, {-2,+3},
       {+3,0}, {+3,+3}, {0,+3}, {-3,+3},
-      {-3,0}, {-3,-3}, {0,-3}, {+3,-3}, // 48-neighbors
+      {-3,0}, {-3,-3}, {0,-3}, {+3,-3}, // 48-neighbors, dx = sqrt(6)
       {+4,0}, {+4,+1}, {+4,+2}, {+4,+3}, {+4,+4},
       {-4,0}, {-4,+1}, {-4,+2}, {-4,+3}, {-4,+4},
       {+4,-1}, {+4,-2}, {+4,-3}, {+4,-4},
@@ -117,7 +137,7 @@ SMART_PARAMETER_SILENT(AMLE_NN,8)
       {-3,-4}, {-2,-4}, {-1,-4}, {0,-4},
       {+3,-4}, {+2,-4}, {+1,-4},
       {-3,+4}, {-2,+4}, {-1,+4}, {0,+4},
-      {+3,+4}, {+2,+4}, {+1,+4}, // 80-neighbours
+      {+3,+4}, {+2,+4}, {+1,+4}, // 80-neighbors, dx=sqrt(8)
       {+5,0}, {+5,+1}, {+5,+2}, {+5,+3}, {+5,+4}, {+5,+5},
       {-5,0}, {-5,+1}, {-5,+2}, {-5,+3}, {-5,+4}, {-5,+5},
       {+5,-1}, {+5,-2}, {+5,-3}, {+5,-4}, {+5,-5},
@@ -125,7 +145,7 @@ SMART_PARAMETER_SILENT(AMLE_NN,8)
       {-4,-5}, {-3,-5}, {-2,-5}, {-1,-5}, {0,-5},
       {+4,-5}, {+3,-5}, {+2,-5}, {+1,-5},
       {-4,+5}, {-3,+5}, {-2,+5}, {-1,+5}, {0,-5},
-      {+4,+5}, {+3,+5}, {+2,+5}, {+1,+5}, // 120-neighbours
+      {+4,+5}, {+3,+5}, {+2,+5}, {+1,+5}, // 120-neighbors, dx=sqrt(10)
     };
 
     assert( nn >= 0 && nn <= 120 );
@@ -152,13 +172,12 @@ SMART_PARAMETER_SILENT(AMLE_NN,8)
 
 // evaluate an image in a neighborhood
 static int get_nvals(float *v, float *wv2, float *x, float *dist, int w, int h, int i, int j,
-    int nn_type)
+    int nn_type, int nn)
 {
 
   int r = 0;
-  int (*n)[2] = get_neighbours(nn_type);
+  int (*n)[2] = get_neighbours(nn_type, nn);
   int (*pn)[2] = n;
-  int nn = AMLE_NN();
 
   for (int p = 0; p < nn; p++)
   {
@@ -202,16 +221,14 @@ static void get_eikonal_idx(int *ind_pos, int *ind_neg, float *x, float *w, int 
         }
 }
 
-static float amle_iteration(float *x, float *dist, int w, int h, int (*mask)[2], int nmask, float *error, int nn_type)
+static float amle_iteration(float *x, float *dist, int w, int h, int (*mask)[2], int nmask, int nn_type, int nn)
 {
 	float actus = 0;
 	float actumax = 0;
-        float err_aux = 0.0;
         float norm_old = 0.0;
 	for (int i = 0; i < w*h; i++)
           norm_old += x[i]*x[i];
 
-        error[0] = 0; // initialize error to 0
 //#pragma omp parallel for
 	for (int p = 0; p < nmask; p++)
 	{
@@ -220,17 +237,12 @@ static float amle_iteration(float *x, float *dist, int w, int h, int (*mask)[2],
 		int idx = j*w + i, indy, indz;
                 float x0 = x[idx];
 		float value[0x100], weight[0x100];
-		int nv = get_nvals(value, weight, x, dist, w, h, i, j, nn_type);
+		int nv = get_nvals(value, weight, x, dist, w, h, i, j, nn_type, nn);
                 get_eikonal_idx(&indy, &indz, value, weight, nv, x0);
 		float a = weight[indz];
 		float b = weight[indy];
 		float newx = (a*value[indy] + b*value[indz]) / (a + b);
 
-                err_aux = fabs(newx-x[idx]);
-                if (err_aux>error[0])
-                  error[0] = err_aux;
-
-		actus += fabs(x[idx] - newx);
 		if (fabs(x[idx]-newx) > actumax)
 			actumax = fabs(x[idx]-newx);
 		x[idx] = newx;
@@ -249,6 +261,7 @@ static void inf_harmonic_extension_with_init(
 		float *initialization,
                 float err_thresh,
                 int nn_type,
+		int nn,
                 int scale,       // current scale
                 int scale_num    // total number of scales
 		)
@@ -257,32 +270,38 @@ static void inf_harmonic_extension_with_init(
 	int nmask, (*mask)[2] = build_mask(&nmask, x, w, h);
         float err_thresh_aux = err_thresh; // relax threshold value for convergence in coarser scales
 
+	// initialize result of u at it (k-1)
+	float *y_old = xmalloc(w*h*sizeof*y_old);
+	
 	// initialize the solution to the given data at the masked pixels
 	for (int i = 0; i < w*h; i++)
-          y[i] = isfinite(x[i]) ? x[i] : initialization[i];
+	{
+		y[i] = isfinite(x[i]) ? x[i] : initialization[i];
+		y_old[i] = isfinite(x[i]) ? x[i] : initialization[i];
+	}
 
-        int counter = 0;
-        float err[] = {1000};
+        int count = 0;
+        float e_k = 1000;
 
-        // do the requested iterations
-        if (scale==scale_num)
-          /* while (counter < niter && err[0] > err_thresh) */
-          while (counter < niter)
-          {
-            float u = amle_iteration(y, dist, w, h, mask, nmask, err, nn_type);
-            counter += 1;
-          }
-        else
-          while (counter < niter)
-          {
-            float u = amle_iteration(y, dist, w, h, mask, nmask, err, nn_type);
-            counter += 1;
-          }
+	// do the requested iterations
+	while (count < niter && e_k > err_thresh)
+	{
 
-        /* printf("number of iterations %d\n", counter); */
-        /* printf("min error between 2 iterations: %g\n", err[0]); */
+		float u = amle_iteration(y, dist, w, h, mask, nmask, nn_type, nn);
+		float diff = 0;
+		for (int i=0; i<w*h; i++)
+			if (!isfinite(x[i]))
+				diff += fabs(y[i]-y_old[i]);
+		e_k = diff/nmask;
+		for (int i=0; i<w*h; i++)
+			y_old[i] = y[i];
+		count += 1;
+	}
+
+	printf("niter %d, e_k %g\n", count, e_k);
 
 	free(mask);
+	free(y_old);
 }
 
 // zoom-out by 2x2 block averages
@@ -352,43 +371,11 @@ static void zoom_in_by_factor_two(float *out, int ow, int oh,
 
 // compute the distances of each point of the image to all
 // neighbours. The distance is
-// d(x,y) = (1-lambda)*|I(x)-I(y)|^2 + lambda*|x-y|^2
-static void distance0(float *dist, float *u, int w, int h, int pd, float lambda, int nn_type)
-{
-
-  int nn = AMLE_NN();
-  int (*n)[2] = get_neighbours(nn_type);
-
-  for(int j=0; j<h; j++)
-    for(int i=0; i<w; i++)
-      for (int p = 0; p < nn; p++)
-      {
-        int ii = i + n[p][0];
-        int jj = j + n[p][1];
-        if (ii >= 0 && jj >= 0 && ii < w && jj < h)
-        {
-	  float a = 0;
-	  float b = (ii-i)*(ii-i) + (jj-j)*(jj-j);
-          for (int l=0; l<pd; l++)
-            a += (u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l])*(u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l]);
-	  a /= pd;
-	  dist[j*w+i+h*w*p] = (1-lambda)*a + lambda*b;
-        }
-        if (ii < 0 || jj < 0 || ii >= w || jj >= h)
-          dist[j*w+i+h*w*p] = -1;
-      }
-
-  free(n);
-}
-
-// compute the distances of each point of the image to all
-// neighbours. The distance is
 // d(x,y) = sqrt((1-lambda)*|I(x)-I(y)|^2 + lambda*|x-y|^2)
-static void distance1(float *dist, float *u, int w, int h, int pd, float lambda, int nn_type)
+static void distance1(float *dist, float *u, int w, int h, int pd, float lambda, int nn_type, int nn)
 {
 
-  int nn = AMLE_NN();
-  int (*n)[2] = get_neighbours(nn_type);
+  int (*n)[2] = get_neighbours(nn_type,nn);
 
   for(int j=0; j<h; j++)
     for(int i=0; i<w; i++)
@@ -416,11 +403,10 @@ static void distance1(float *dist, float *u, int w, int h, int pd, float lambda,
 // compute the distances of each point of the image to all
 // neighbours. The distance is
 // d(x,y) = (1-lambda)*|I(x)-I(y)| + lambda*|x-y|
-static void distance2(float *dist, float *u, int w, int h, int pd, float lambda, int nn_type)
+static void distance2(float *dist, float *u, int w, int h, int pd, float lambda, int nn_type, int nn)
 {
 
-  int nn = AMLE_NN();
-  int (*n)[2] = get_neighbours(nn_type);
+  int (*n)[2] = get_neighbours(nn_type,nn);
 
   for(int j=0; j<h; j++)
     for(int i=0; i<w; i++)
@@ -447,15 +433,44 @@ static void distance2(float *dist, float *u, int w, int h, int pd, float lambda,
 
 // compute the distances of each point of the image to all
 // neighbours. The distance is
+// d(x,y) = (1-lambda)*|I(x)-I(y)|^2 + lambda*|x-y|^2
+static void distance3(float *dist, float *u, int w, int h, int pd, float lambda, int nn_type, int nn)
+{
+
+  int (*n)[2] = get_neighbours(nn_type,nn);
+
+  for(int j=0; j<h; j++)
+    for(int i=0; i<w; i++)
+      for (int p = 0; p < nn; p++)
+      {
+        int ii = i + n[p][0];
+        int jj = j + n[p][1];
+        if (ii >= 0 && jj >= 0 && ii < w && jj < h)
+        {
+	  float a = 0;
+	  float b = (ii-i)*(ii-i) + (jj-j)*(jj-j);
+          for (int l=0; l<pd; l++)
+            a += (u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l])*(u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l]);
+	  a /= pd;
+	  dist[j*w+i+h*w*p] = (1-lambda)*a + lambda*b;
+        }
+        if (ii < 0 || jj < 0 || ii >= w || jj >= h)
+          dist[j*w+i+h*w*p] = -1;
+      }
+
+  free(n);
+}
+
+// compute the distances of each point of the image to all
+// neighbours. The distance is
 // d(x,y) = (1-lambda)*||patch(x)-patch(y)||^2 + lambda*||x-y||^2
 // where patch(x) is the patch centered at x of size sxs
 // s has to be odd
-static void distance3(float *dist, float *u, int w, int h, int pd, float lambda, int nn_type)
+static void distance4(float *dist, float *u, int w, int h, int pd, float lambda, int nn_type, int nn)
 {
 
   int s = 5; // add as parameter to the function: int s
-  int nn = AMLE_NN();
-  int (*n)[2] = get_neighbours(nn_type);
+  int (*n)[2] = get_neighbours(nn_type,nn);
 
   for(int j=0; j<h; j++)
     for(int i=0; i<w; i++)
@@ -485,28 +500,27 @@ static void distance3(float *dist, float *u, int w, int h, int pd, float lambda,
 }
 
 
-static void distance(float *dist, float *u, int w, int h, int pd, float lambda, int dist_type, int nn_type)
+static void distance(float *dist, float *u, int w, int h, int pd, float lambda, int dist_type, int nn_type, int nn)
 {
-  if (dist_type==0)
-    distance0(dist, u, w, h, pd, lambda, nn_type);
-  else if (dist_type==1)
-    distance1(dist, u, w, h, pd, lambda, nn_type);
+  if (dist_type==1)
+    distance1(dist, u, w, h, pd, lambda, nn_type, nn);
   else if (dist_type==2)
-    distance2(dist, u, w, h, pd, lambda, nn_type);
+    distance2(dist, u, w, h, pd, lambda, nn_type, nn);
   else if (dist_type==3)
-    distance3(dist, u, w, h, pd, lambda, nn_type);
+    distance3(dist, u, w, h, pd, lambda, nn_type, nn);
+  else if (dist_type==4)
+    distance4(dist, u, w, h, pd, lambda, nn_type, nn);
 
 }
 #include "iio.h"
 
 SMART_PARAMETER_SILENT(AMLE_ONLY,0)
 
-void amle_recursive(float *out, float *in, float *guide, float *dist, int w, int h, int niter, int scale, float lambda, int pd_guide, float err_thresh, int dist_type, int nn_type, int scale_num)
+void amle_recursive(float *out, float *in, float *guide, float *dist, int w, int h, int niter, int scale, float lambda, int pd_guide, float err_thresh, int dist_type, int nn_type, int nn, int scale_num)
 {
   float *init = xmalloc(w*h*sizeof*init);
   if (scale > 1)
   {
-    int nn = AMLE_NN();
     int ws = ceil(w/2.0);
     int hs = ceil(h/2.0);
     float *ins = xmalloc(ws*hs*sizeof*ins);
@@ -515,8 +529,8 @@ void amle_recursive(float *out, float *in, float *guide, float *dist, int w, int
     float *outs = xmalloc(ws*hs*sizeof*outs);
     zoom_out_by_factor_two(ins, ws, hs, in, w, h, 1);
     zoom_out_by_factor_two(guides, ws, hs, guide, w, h, pd_guide);
-    distance(dists, guides, ws, hs, pd_guide, lambda, dist_type, nn_type);
-    amle_recursive(outs, ins, guides, dists, ws, hs, niter, scale - 1, lambda, pd_guide, err_thresh, dist_type, nn_type, scale_num);
+    distance(dists, guides, ws, hs, pd_guide, lambda, dist_type, nn_type, nn);
+    amle_recursive(outs, ins, guides, dists, ws, hs, niter, scale - 1, lambda, pd_guide, err_thresh, dist_type, nn_type, nn, scale_num);
     zoom_in_by_factor_two(init, w, h, outs, ws, hs, 1);
 
     free(ins);
@@ -529,26 +543,24 @@ void amle_recursive(float *out, float *in, float *guide, float *dist, int w, int
   }
 
   if (AMLE_ONLY() > 0 && AMLE_ONLY()!=w) niter = 0;
-  inf_harmonic_extension_with_init(out, in, dist, w, h, niter, init, err_thresh, nn_type, scale, scale_num);
+  inf_harmonic_extension_with_init(out, in, dist, w, h, niter, init, err_thresh, nn_type, nn, scale, scale_num);
   free(init);
 }
 
 
 // extension by AMLE each channel of a color image
-void amle_recursive_separable(float *out, float *in, float *guide, int w, int h, int pd, int pd_guide, int niter, int nscale, float lambda,
-    float err_thresh, int dist_type, int nn_type)
+void amle_recursive_separable(float *out, float *in, float *guide, int w, int h, int pd, int pd_guide, int niter, int nscale, float lambda, float err_thresh, int dist_type, int nn_type, int nn)
 {
 
-	int nn = AMLE_NN();
 	float *dist = xmalloc(w*h*nn*sizeof*dist);
 
-	distance(dist, guide, w, h, pd_guide, lambda, dist_type, nn_type);// do this in amle_recursive!!!
+	distance(dist, guide, w, h, pd_guide, lambda, dist_type, nn_type, nn);// do this in amle_recursive!!!
 
 	for (int l = 0; l < pd; l++)
 	{
 		float *outl = out + w*h*l;
 		float *inl = in + w*h*l;
-		amle_recursive(outl, inl, guide, dist, w, h, niter, nscale, lambda, pd_guide, err_thresh, dist_type, nn_type, nscale);
+		amle_recursive(outl, inl, guide, dist, w, h, niter, nscale, lambda, pd_guide, err_thresh, dist_type, nn_type, nn, nscale);
 	}
 
 	free(dist);
@@ -558,43 +570,77 @@ int main(int argc, char *argv[])
 {
 	if (argc != 11) {
 		fprintf(stderr, "usage:\n\t"
-		"%s NITER NS lambda err_threshold distance_type neighbourgood_type data.png mask.png out.png guide.png\n", *argv);
-		//0 1     2  3      4             5             6                  7        8        9       10
+		"%s NS lambda err_threshold distance_type neighbourgood_type neighbourhood_ratio data.png mask.png out.png guide.png\n", *argv);
+		//0 1  2      3             4             5                  6                   7        8        9       10
                 fprintf(stderr, "\n");
-                fprintf(stderr, "neighbourhood_type = 1 --> AMLE_NN = 4,8,16,24,32\n");
-                fprintf(stderr, "neighbourhood_type = 2 --> AMLE_NN = 4,8,24,48,80,120\n");
-                fprintf(stderr, "neighbourhood_type = 3 --> AMLE_NN = 8,16,24,40,48\n");
+                fprintf(stderr, "distance_type = 1, 2, 3 or 4\n");
+                fprintf(stderr, "neighbourhood_type = 1 or 2\n");
+                fprintf(stderr, "neighbourhood_ratio = 1, 2, 3, 4 or 5\n");
 		return 1;
 	}
-	int niter = atoi(argv[1]);
-	int nscales = atoi(argv[2]);
-	float lambda = atof(argv[3]);
-        float err_thresh = atof(argv[4]);
-        int dist_type = atoi(argv[5]);
-        int nn_type = atoi(argv[6]);
+	int niter = 5000; //atoi(argv[1]);
+	int nscales = atoi(argv[1]);
+	float lambda = atof(argv[2]);
+        float err_thresh = atof(argv[3]);
+        int dist_type = atoi(argv[4]);
+        int nn_type = atoi(argv[5]);
+	int r = atoi(argv[6]);
 	char *filename_in = argv[7];
 	char *filename_mask = argv[8];
 	char *filename_out = argv[9];
 	char *filename_guide = argv[10];
 
         // check distance type validity
-        if (dist_type<0 | dist_type>3)
-          return printf("The distance type shoulb be 0, 1, 2 or 3\n");
+        if (dist_type<1 | dist_type>4)
+          return printf("The distance type should be 1, 2, 3 or 4\n");
 
         // check neighbourhood type validity
-        if (nn_type<1 | nn_type>3)
-          return printf("The neighbourhood type shoulb be  1, 2 or 3\n");
+        if (nn_type<1 | nn_type>2)
+          return printf("The neighbourhood type should be  1 or 2\n");
 
-        int nn = AMLE_NN();
+	// set neighbourhood size given a valid dx
+	// ...
+        if (r<1 | r>5)
+		return fprintf(stderr, "The neighbourhood ratio should be 1, 2, 3, 4, or 5\n");
+        int nn;
         if (nn_type==1)
-          if (nn!=4 & nn!=8 & nn!=16 & nn!=24 & nn!=32)
-            return fprintf(stderr, "neighbourhood_type = 1 --> AMLE_NN = 4,8,16,24,32\n");
+		switch(r)
+		{
+			case 1:
+				nn = 8;
+				break;
+			case 2:
+				nn = 16;
+				break;
+			case 3:
+				nn = 32;
+				break;
+			case 4:
+				nn = 56;
+				break;
+			case 5:
+				nn = 88;
+				break;
+		}
         if (nn_type==2)
-          if (nn!=4 & nn!=8 & nn!=24 & nn!=48 & nn!=80 & nn!=120)
-            return fprintf(stderr, "neighbourhood_type = 2 --> AMLE_NN = 4,8,24,48,80,120\n");
-        if (nn_type==3)
-          if (nn!=8 & nn!=16 & nn!=24 & nn!=40 & nn!=48)
-            return fprintf(stderr, "neighbourhood_type = 3 --> AMLE_NN = 8,16,24,40,48\n");
+		switch(r)
+		{
+			case 1:
+				nn = 8;
+				break;
+			case 2:
+				nn = 24;
+				break;
+			case 3:
+				nn = 48;
+				break;
+			case 4:
+				nn = 80;
+				break;
+			case 5:
+				nn = 120;
+				break;
+		}
 
 	int w[3], h[3], pd[3];
 	float *in = iio_read_image_float_split(filename_in, w, h, pd);
@@ -622,8 +668,9 @@ int main(int argc, char *argv[])
 			for (int l = 0; l < *pd; l++)
 				in[*w**h*l+i] = NAN;
 		}
-	amle_recursive_separable(out, in, guide, *w, *h, *pd, pd[2], niter, nscales, lambda, err_thresh, dist_type, nn_type);
+	amle_recursive_separable(out, in, guide, *w, *h, pd[0], pd[2], niter, nscales, lambda, err_thresh, dist_type, nn_type, nn);
 
+	
         // compute EPE between input flow and output flow
         float diff = 0;
 	for (int i=0; i<*w**h; i++)
