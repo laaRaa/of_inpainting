@@ -4,6 +4,7 @@ Lara Raad (lara.raad@upf.edu)
 
 README file for two optical flow inpainting algorithms using the AMLE and
 Laplace-Beltrami operators on a 2D Riemannian manifold.
+The AMLE is implemented in C and the Laplace-Beltrami in Octave/Matlab
 
 -------------------------------
 AMLE OPTICAL FLOW INTERPOLATION
@@ -12,7 +13,6 @@ AMLE OPTICAL FLOW INTERPOLATION
  - Compilation:
 
    make           : normal compilation
-   make openmp    : compilation with OpenMP parallelism support
 
  - Required libraries:
 

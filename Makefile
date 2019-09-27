@@ -1,18 +1,21 @@
+# compiler and linker options
 CFLAGS ?= -O3 -march=native
 LDLIBS  = -lpng -ltiff -ljpeg -lm
 
-SRC    = amle_recsep.c iio.c
-BIN    = amle_recsep
-COPT   = -std=c99 -O3
-OPENMP =
+# variables
+OBJ     = amle_recsep.o iio.o
+BIN     = amle_recsep
 
+# default target
 default: $(BIN)
 
-openmp: OPENMP=-fopenmp
-openmp: default
+# build rule
+$(BIN): $(OBJ)
 
-$(BIN): $(SRC)
-	$(CC) $(COPT) $(OPENMP) -o $@ $^ -lpng -ltiff -ljpeg -lm
+# test
+test: $(BIN)
+	./amle_recsep 3 0.001 0.001 3 1 2 test/input.flo test/mask.png test/out.flo test/guide.png
 
-clean:
-	$(RM) $(BIN)
+# bureaucracy
+clean:  ; $(RM) $(BIN) $(OBJ) test/out.flo
+.PHONY: default test clean

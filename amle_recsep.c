@@ -22,9 +22,6 @@ along with this program. If not, see <http://www.gnu.org/licenses/>. */
 #include <string.h>
 #include "smapa.h"
 
-#define MIN(a,b) ( (a)<(b) ? (a) : (b) )
-#define MAX(a,b) ( (a)>(b) ? (a) : (b) )
-#define ABS(a) (a<0)?-(a):(a)
 
 // utility function that always returns a valid pointer to memory
 static void *xmalloc(size_t n)
@@ -607,8 +604,7 @@ int main(int argc, char *argv[])
         if (nn_type==1)
 		switch(r)
 		{
-			case 1:
-				nn = 8;
+			case 1: nn = 8;
 				break;
 			case 2:
 				nn = 16;
