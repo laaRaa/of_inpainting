@@ -226,7 +226,9 @@ static float amle_iteration(float *x, float *dist, int w, int h, int (*mask)[2],
 	for (int i = 0; i < w*h; i++)
           norm_old += x[i]*x[i];
 
-//#pragma omp parallel for
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif//_OPENMP
 	for (int p = 0; p < nmask; p++)
 	{
 		int i = mask[p][0];

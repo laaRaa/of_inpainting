@@ -1,6 +1,6 @@
 # compiler and linker options
-CFLAGS ?= -O3 -march=native
-LDLIBS  = -lpng -ltiff -ljpeg -lm
+CFLAGS ?= -O3 -march=native        -fopenmp
+LDLIBS  = -lpng -ltiff -ljpeg -lm  -fopenmp
 
 # variables
 OBJ     = amle_recsep.o iio.o
