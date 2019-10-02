@@ -4,7 +4,6 @@ LDLIBS  = -lpng -ltiff -ljpeg -lm
 
 # octave/matlab interpreter
 MINTERP = octave
-#MINTERP = matlab -nojvm -nodisplay -nosplash -r
 
 # variables
 OBJ     = amle_recsep.o iio.o
@@ -16,10 +15,15 @@ default: $(BIN)
 # build rule
 $(BIN): $(OBJ)
 
-# test
+# tests
 test: $(BIN)
 	./amle_recsep 3 0.001 0.001 3 1 2 test/input.flo test/mask.png test/out.flo test/guide.png
-	$(MINTERP) test_LB.m || true
+
+test_octave:
+	octave test_LB.m
+
+test_matlab:
+	matlab -nojvm -nodisplay -nosplash -r "test_LB;quit"
 
 # bureaucracy
 clean:  ; $(RM) $(BIN) $(OBJ) test/out.flo
