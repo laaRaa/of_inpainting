@@ -26,8 +26,8 @@ clean:  ; $(RM) $(BIN) $(OBJ) test/out.flo
 .PHONY: default test clean
 
 
-# hack to add -fopenmp only when the CXX compiler supports it
-OMPVER := $(shell $(CXX) -dM -E -fopenmp - 2>/dev/null </dev/null |grep _OPENMP)
+# hack to add -fopenmp only when the compiler supports it
+OMPVER := $(shell $(CC) -dM -E -fopenmp - 2>/dev/null </dev/null |grep _OPENMP)
 ifneq ($(OMPVER),)
 LDLIBS := $(LDLIBS) -fopenmp
 CFLAGS := $(CFLAGS) -fopenmp
