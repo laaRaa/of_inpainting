@@ -15,6 +15,7 @@ $(BIN): $(OBJ)
 # test
 test: $(BIN)
 	./amle_recsep 3 0.001 0.001 3 1 2 test/input.flo test/mask.png test/out.flo test/guide.png
+	matlab -nojvm -nodisplay -nosplash -r "test_LB; quit"
 
 # bureaucracy
 clean:  ; $(RM) $(BIN) $(OBJ) test/out.flo
