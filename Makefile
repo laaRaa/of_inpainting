@@ -1,7 +1,10 @@
 # compiler and linker options
 CFLAGS ?= -O3 -march=native
 LDLIBS  = -lpng -ltiff -ljpeg -lm
+
+# octave/matlab interpreter
 MINTERP = octave
+#MINTERP = matlab -nojvm -nodisplay -nosplash -r
 
 # variables
 OBJ     = amle_recsep.o iio.o
