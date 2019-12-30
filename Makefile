@@ -6,7 +6,7 @@ LDLIBS  = -lpng -ltiff -ljpeg -lm
 MINTERP = octave
 
 # variables
-OBJ     = amle_recsep.o iio.o
+OBJ     = lib_amle_recsep.o iio.o
 BIN     = amle_recsep
 
 # default target
