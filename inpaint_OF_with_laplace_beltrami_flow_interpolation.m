@@ -23,13 +23,13 @@
 % lambda: anisotropic weight
 % g: metric
 
-function laplace_beltrami_flow_interpolation(flow_in, mask, guide,...
-    flow_out, lambda, g)
+function inpaint_OF_with_laplace_beltrami_flow_interpolation(flow_in,...
+                                          guide, mask, lambda, w, flow_out)
 
 kappa = im2double(imread(mask)); % read inpainting mask
 kappa = kappa(:,:,1); % 
 kappa(kappa~=0) = 1; % values ~= 0 are pixels to inpaint
-I = im2double(imread(guide)); % read guiding image
+g = im2double(imread(guide)); % read guiding image
 v = readFlowFile(flow_in); % read ground truth flow
-u = inpaint_flow(v,I,kappa,lambda,g); % inpaint missing regions
+u = laplace_beltrami_interpolation(v,g,kappa,lambda,w); % inpaint missing regions
 writeFlowFile(u,flow_out)
