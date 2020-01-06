@@ -17,7 +17,7 @@ $(BIN): $(OBJ)
 
 # tests
 test: $(BIN)
-	./amle_recsep 3 0.001 0.001 3 1 2 test/input.flo test/mask.png test/out.flo test/guide.png
+	./amle_recsep 3 0.001 0.001 3 1 2 test/input.flo test/mask.png test/output_amle.flo test/guide.png
 
 test_octave:
 	octave test_LB.m
@@ -26,7 +26,7 @@ test_matlab:
 	matlab -nojvm -nodisplay -nosplash -r "test_LB;quit"
 
 # bureaucracy
-clean:  ; $(RM) $(BIN) $(OBJ) test/out.flo
+clean:  ; $(RM) $(BIN) $(OBJ) test/output_amle.flo
 .PHONY: default test clean
 
 
