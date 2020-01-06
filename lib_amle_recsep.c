@@ -61,25 +61,25 @@ inline static float getpixel_1(float *x, int w, int h, int i, int j, int l)
 // the output "mask[i][2]" contains the two coordinates of the ith masked pixel
 static int (*build_mask(int *out_nmask, float *x, int w, int h))[2]
 {
-	int nmask = 0;
-	for (int i = 0; i < w*h; i++)
-		if (isnan(x[i]))
-			nmask += 1;
-	int (*mask)[2] = xmalloc(w*h*2*sizeof(int)), cx = 0;
-	for (int j = 0; j < h; j++)
-		for (int i = 0; i < w; i++)
-			if (isnan(x[j*w + i])) {
-				mask[cx][0] = i;
-				mask[cx][1] = j;
-				cx += 1;
-			}
-	assert(cx == nmask);
+  int nmask = 0;
+  for (int i = 0; i < w*h; i++)
+    if (isnan(x[i]))
+      nmask += 1;
+  int (*mask)[2] = xmalloc(w*h*2*sizeof(int)), cx = 0;
+  for (int j = 0; j < h; j++)
+    for (int i = 0; i < w; i++)
+      if (isnan(x[j*w + i])) {
+        mask[cx][0] = i;
+        mask[cx][1] = j;
+        cx += 1;
+      }
+  assert(cx == nmask);
 
-	*out_nmask = nmask;
-	return mask;
+  *out_nmask = nmask;
+  return mask;
 }
 
-static int(*get_neighbours(int nn_type, int nn))[2]
+  static int(*get_neighbours(int nn_type, int nn))[2]
 {
   int (*n)[2] = xmalloc(nn*2*sizeof(int));
 
@@ -168,64 +168,60 @@ static int(*get_neighbours(int nn_type, int nn))[2]
 }
 
 // evaluate an image in a neighborhood
-static int get_nvals(float *v, float *wv2, float *x, float *dist,
-		int w, int h, int i, int j, int nn_type, int nn)
+static int get_nvals(float *v, float *wv2, float *x, float *weight, int w, int h, int i, int j,
+    int nn_type, int nn)
 {
 
-	int r = 0;
-	int (*n)[2] = get_neighbours(nn_type, nn);
-	int (*pn)[2] = n;
+  int r = 0;
+  int (*n)[2] = get_neighbours(nn_type, nn);
+  int (*pn)[2] = n;
 
-	for (int p = 0; p < nn; p++)
-	{
-		int ii = i + pn[p][0];
-		int jj = j + pn[p][1];
-		if (ii >= 0 && jj >= 0 && ii < w && jj < h)
-		{
-			v[r] = x[w*jj+ii];
-			if (wv2)
-				wv2[r] = dist[j*w+i+h*w*p];
-			r += 1;
-		}
-	}
+  for (int p = 0; p < nn; p++)
+  {
+    int ii = i + pn[p][0];
+    int jj = j + pn[p][1];
+    if (ii >= 0 && jj >= 0 && ii < w && jj < h)
+    {
+      v[r] = x[w*jj+ii];
+      if (wv2)
+        wv2[r] = weight[j*w+i+h*w*p];
+      r += 1;
+    }
+  }
 
-	free(n);
+  free(n);
 
-	return r;
+  return r;
 }
 
-static void get_eikonal_idx(int *ind_pos, int *ind_neg, float *x,
-		float *w, int n, float x0)
+static void get_eikonal_idx(int *ind_pos, int *ind_neg, float *x, float *w, int n, float x0)
 {
 	*ind_pos = 0;
-	*ind_neg = 0;
+        *ind_neg = 0;
 
-	float eik_pos_max = -INFINITY;
-	float eik_neg_min = +INFINITY;
+        float eik_pos_max = -INFINITY;
+        float eik_neg_min = +INFINITY;
 
-	for (int j=0; j<n; j++)
-	{
-		float eik = ((x[j]-x0))/(w[j]);
-		if (eik > eik_pos_max)
-		{
-			eik_pos_max = eik;
-			*ind_pos = j;
-		}
-		if (eik < eik_neg_min)
-		{
-			eik_neg_min = eik;
-			*ind_neg = j;
-		}
-	}
+        for (int j=0; j<n; j++)
+        {
+          float eik = ((x[j]-x0))*(w[j]);
+          if (eik > eik_pos_max)
+          {
+            eik_pos_max = eik;
+            *ind_pos = j;
+          }
+          if (eik < eik_neg_min)
+          {
+            eik_neg_min = eik;
+            *ind_neg = j;
+          }
+        }
 }
 
-static float amle_iteration(float *x, float *dist,
-		int w, int h, int (*mask)[2], int nmask, int nn_type, int nn)
+static float amle_iteration(float *x, float *weight, int w, int h, int (*mask)[2], int nmask, int nn_type, int nn)
 {
+	float actus = 0;
 	float actumax = 0;
-	float norm_old = 0.0;
-	for (int i = 0; i < w*h; i++)
-		norm_old += x[i]*x[i];
 
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -236,12 +232,12 @@ static float amle_iteration(float *x, float *dist,
 		int j = mask[p][1];
 		int idx = j*w + i, indy, indz;
                 float x0 = x[idx];
-		float value[0x100], weight[0x100];
-		int nv = get_nvals(value, weight, x, dist, w, h, i, j, nn_type, nn);
-                get_eikonal_idx(&indy, &indz, value, weight, nv, x0);
-		float a = weight[indz];
-		float b = weight[indy];
-		float newx = (a*value[indy] + b*value[indz]) / (a + b);
+		float value[0x100], weights[0x100];
+		int nv = get_nvals(value, weights, x, weight, w, h, i, j, nn_type, nn);
+                get_eikonal_idx(&indy, &indz, value, weights, nv, x0);
+		float a = weights[indz];
+		float b = weights[indy];
+		float newx = (a*value[indz] + b*value[indy]) / (a + b);
 
 		if (fabs(x[idx]-newx) > actumax)
 			actumax = fabs(x[idx]-newx);
@@ -251,30 +247,27 @@ static float amle_iteration(float *x, float *dist,
 }
 
 // fill the holes of the image x using an infinity harmonic function
-static void inf_harmonic_extension_with_init(
+static void amle_extension(
 		float *y,        // output image
 		float *x,        // input image (NAN values indicate holes)
-		float *dist,
+		float *weight,
 		int w,           // image width
 		int h,           // image height
 		int niter,       // number of iterations to run
 		float *initialization,
-		float err_thresh,
-		int nn_type,
+                float err_thresh,
+                int nn_type,
 		int nn,
-		int scale,       // current scale
-		int scale_num    // total number of scales
+                int scale,       // current scale
+                int scale_num    // total number of scales
 		)
 {
-	// unused parameter
-	(void) err_thresh;
-
 	// build list of masked pixels
 	int nmask, (*mask)[2] = build_mask(&nmask, x, w, h);
 
 	// initialize result of u at it (k-1)
 	float *y_old = xmalloc(w*h*sizeof*y_old);
-
+	
 	// initialize the solution to the given data at the masked pixels
 	for (int i = 0; i < w*h; i++)
 	{
@@ -288,7 +281,7 @@ static void inf_harmonic_extension_with_init(
 	// do the requested iterations
 	while (count < niter && e_k > err_thresh)
 	{
-		amle_iteration(y, dist, w, h, mask, nmask, nn_type, nn);
+		float u = amle_iteration(y, weight, w, h, mask, nmask, nn_type, nn);
 		float diff = 0;
 		for (int i=0; i<w*h; i++)
 			if (!isfinite(x[i]))
@@ -363,7 +356,7 @@ static void zoom_in_by_factor_two(float *out, int ow, int oh,
 	//getpixel_operator p = getpixel_1;
 	assert(abs(2*iw-ow) < 2);
 	assert(abs(2*ih-oh) < 2);
-	for (int l = 0; l < pd; l++)
+        for (int l = 0; l < pd; l++)
 	for (int j = 0; j < oh; j++)
 	for (int i = 0; i < ow; i++)
 		//out[ow*j+i + l*ow*oh] = p(in, iw, ih, round((i-0.5)/2), round((j-0.5)/2), l);
@@ -373,7 +366,7 @@ static void zoom_in_by_factor_two(float *out, int ow, int oh,
 // compute the distances of each point of the image to all
 // neighbours. The distance is
 // d(x,y) = sqrt((1-lambda)*|I(x)-I(y)|^2 + lambda*|x-y|^2)
-static void distance1(float *dist, float *u, int w, int h, int pd, float lambda, int nn_type, int nn)
+static void compute_weight_1(float *weight, float *u, int w, int h, int pd, float lambda, int nn_type, int nn)
 {
 
   int (*n)[2] = get_neighbours(nn_type,nn);
@@ -386,16 +379,16 @@ static void distance1(float *dist, float *u, int w, int h, int pd, float lambda,
         int jj = j + n[p][1];
         if (ii >= 0 && jj >= 0 && ii < w && jj < h)
         {
-          dist[j*w+i+h*w*p] = 0;
+          weight[j*w+i+h*w*p] = 0;
 	  float a = 0;
 	  float b = (ii-i)*(ii-i) + (jj-j)*(jj-j);
           for (int l=0; l<pd; l++)
             a += (u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l])*(u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l]);
 	  a /= pd;
-          dist[j*w+i+h*w*p] = sqrt((1-lambda)*a + lambda*b);
+          weight[j*w+i+h*w*p] = 1/(sqrt((1-lambda)*a + lambda*b));
         }
         if (ii < 0 || jj < 0 || ii >= w || jj >= h)
-          dist[j*w+i+h*w*p] = -1;
+          weight[j*w+i+h*w*p] = -1;
       }
 
   free(n);
@@ -404,7 +397,7 @@ static void distance1(float *dist, float *u, int w, int h, int pd, float lambda,
 // compute the distances of each point of the image to all
 // neighbours. The distance is
 // d(x,y) = (1-lambda)*|I(x)-I(y)| + lambda*|x-y|
-static void distance2(float *dist, float *u, int w, int h, int pd, float lambda, int nn_type, int nn)
+static void compute_weight_2(float *weight, float *u, int w, int h, int pd, float lambda, int nn_type, int nn)
 {
 
   int (*n)[2] = get_neighbours(nn_type,nn);
@@ -423,10 +416,10 @@ static void distance2(float *dist, float *u, int w, int h, int pd, float lambda,
             a += (u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l])*(u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l]);
 	  a /= pd;
 	  a = sqrt(a);
-          dist[j*w+i+h*w*p] = (1-lambda)*a + lambda*b;
+          weight[j*w+i+h*w*p] = 1/((1-lambda)*a + lambda*b);
         }
         if (ii < 0 || jj < 0 || ii >= w || jj >= h)
-          dist[j*w+i+h*w*p] = -1;
+          weight[j*w+i+h*w*p] = -1;
       }
 
   free(n);
@@ -435,7 +428,7 @@ static void distance2(float *dist, float *u, int w, int h, int pd, float lambda,
 // compute the distances of each point of the image to all
 // neighbours. The distance is
 // d(x,y) = (1-lambda)*|I(x)-I(y)|^2 + lambda*|x-y|^2
-static void distance3(float *dist, float *u, int w, int h, int pd, float lambda, int nn_type, int nn)
+static void compute_weight_3(float *weight, float *u, int w, int h, int pd, float lambda, int nn_type, int nn)
 {
 
   int (*n)[2] = get_neighbours(nn_type,nn);
@@ -453,10 +446,10 @@ static void distance3(float *dist, float *u, int w, int h, int pd, float lambda,
           for (int l=0; l<pd; l++)
             a += (u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l])*(u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l]);
 	  a /= pd;
-	  dist[j*w+i+h*w*p] = (1-lambda)*a + lambda*b;
+	  weight[j*w+i+h*w*p] = 1/((1-lambda)*a + lambda*b);
         }
         if (ii < 0 || jj < 0 || ii >= w || jj >= h)
-          dist[j*w+i+h*w*p] = -1;
+          weight[j*w+i+h*w*p] = -1;
       }
 
   free(n);
@@ -467,7 +460,7 @@ static void distance3(float *dist, float *u, int w, int h, int pd, float lambda,
 // d(x,y) = (1-lambda)*||patch(x)-patch(y)||^2 + lambda*||x-y||^2
 // where patch(x) is the patch centered at x of size sxs
 // s has to be odd
-static void distance4(float *dist, float *u, int w, int h, int pd, float lambda, int nn_type, int nn)
+static void compute_weight_4(float *weight, float *u, int w, int h, int pd, float lambda, int nn_type, int nn)
 {
 
   int s = 5; // add as parameter to the function: int s
@@ -488,12 +481,12 @@ static void distance4(float *dist, float *u, int w, int h, int pd, float lambda,
 	      for (int n=-(s-1)/2; n<= (s-1)/2; n++)
 		if (jj+n>=0 && jj+n<h && ii+m>=0 && ii+m<w && j+n>=0 && j+n<h && i+m>=0 && i+m<w)
 		  a += (u[(jj+n)*w+(ii+m)+w*h*l]-u[(j+n)*w+(i+m)+w*h*l])*(u[(jj+n)*w+(ii+m)+w*h*l]-u[(j+n)*w+(i+m)+w*h*l]);
-          a = a/s/s/3; // normalize by the number of pixels in a patch
+          a = a/s/s/pd; // normalize by the number of pixels in a patch
           float b = (ii-i)*(ii-i) + (jj-j)*(jj-j);
-          dist[j*w+i+h*w*p] = (1-lambda)*a + lambda*b;
+          weight[j*w+i+h*w*p] = 1/((1-lambda)*a + lambda*b);
         }
         if (ii < 0 || jj < 0 || ii >= w || jj >= h)
-          dist[j*w+i+h*w*p] = -1;
+          weight[j*w+i+h*w*p] = -1;
       }
     }
 
@@ -501,23 +494,32 @@ static void distance4(float *dist, float *u, int w, int h, int pd, float lambda,
 }
 
 
-static void distance(float *dist, float *u, int w, int h, int pd, float lambda, int dist_type, int nn_type, int nn)
+static void compute_weight_map(float *weight, float *u, int w, int h, int pd, float lambda, int w_type, int nn_type, int nn)
 {
-	if (dist_type==1)
-		distance1(dist, u, w, h, pd, lambda, nn_type, nn);
-	else if (dist_type==2)
-		distance2(dist, u, w, h, pd, lambda, nn_type, nn);
-	else if (dist_type==3)
-		distance3(dist, u, w, h, pd, lambda, nn_type, nn);
-	else if (dist_type==4)
-		distance4(dist, u, w, h, pd, lambda, nn_type, nn);
-
+  switch (w_type)
+  {
+	case 1:
+	  compute_weight_1(weight, u, w, h, pd, lambda, nn_type, nn);
+	  break;
+	case 2:
+	  compute_weight_2(weight, u, w, h, pd, lambda, nn_type, nn);
+	  break;
+	case 3:
+	  compute_weight_3(weight, u, w, h, pd, lambda, nn_type, nn);
+	  break;
+	case 4:
+	  compute_weight_4(weight, u, w, h, pd, lambda, nn_type, nn);
+	  break;
+  }
 }
+#include "iio.h"
 
 SMART_PARAMETER_SILENT(AMLE_ONLY,0)
 
-void amle_recursive(float *out, float *in, float *guide, float *dist, int w, int h, int niter, int scale, float lambda, int pd_guide, float err_thresh, int dist_type, int nn_type, int nn, int scale_num)
+void amle_recursive(float *out, float *in, float *guide, int w, int h, int niter, int scale, float lambda, int pd_guide, float err_thresh, int w_type, int nn_type, int nn, int scale_num)
 {
+  float *weight = xmalloc(w*h*nn*sizeof*weight);
+  compute_weight_map(weight, guide, w, h, pd_guide, lambda, w_type, nn_type, nn);
   float *init = xmalloc(w*h*sizeof*init);
   if (scale > 1)
   {
@@ -525,43 +527,34 @@ void amle_recursive(float *out, float *in, float *guide, float *dist, int w, int
     int hs = ceil(h/2.0);
     float *ins = xmalloc(ws*hs*sizeof*ins);
     float *guides = xmalloc(ws*hs*pd_guide*sizeof*guides);
-    float *dists = xmalloc(ws*hs*nn*sizeof*dists);
     float *outs = xmalloc(ws*hs*sizeof*outs);
     zoom_out_by_factor_two(ins, ws, hs, in, w, h, 1);
     zoom_out_by_factor_two(guides, ws, hs, guide, w, h, pd_guide);
-    distance(dists, guides, ws, hs, pd_guide, lambda, dist_type, nn_type, nn);
-    amle_recursive(outs, ins, guides, dists, ws, hs, niter, scale - 1, lambda, pd_guide, err_thresh, dist_type, nn_type, nn, scale_num);
+    amle_recursive(outs, ins, guides, ws, hs, niter, scale - 1, lambda, pd_guide, err_thresh, w_type, nn_type, nn, scale_num);
     zoom_in_by_factor_two(init, w, h, outs, ws, hs, 1);
 
     free(ins);
     free(outs);
     free(guides);
-    free(dists);
   } else {
     for (int i = 0 ; i < w*h; i++)
       init[i] = 0;
   }
 
   if (AMLE_ONLY() > 0 && AMLE_ONLY()!=w) niter = 0;
-  inf_harmonic_extension_with_init(out, in, dist, w, h, niter, init, err_thresh, nn_type, nn, scale, scale_num);
+  amle_extension(out, in, weight, w, h, niter, init, err_thresh, nn_type, nn, scale, scale_num);
   free(init);
+  free(weight);
 }
 
 
 // extension by AMLE each channel of a color image
-void amle_recursive_separable(float *out, float *in, float *guide, int w, int h, int pd, int pd_guide, int niter, int nscale, float lambda, float err_thresh, int dist_type, int nn_type, int nn)
+void amle_recursive_separable(float *out, float *in, float *guide, int w, int h, int pd, int pd_guide, int niter, int nscale, float lambda, float err_thresh, int w_type, int nn_type, int nn)
 {
-
-	float *dist = xmalloc(w*h*nn*sizeof*dist);
-
-	distance(dist, guide, w, h, pd_guide, lambda, dist_type, nn_type, nn);// do this in amle_recursive!!!
-
 	for (int l = 0; l < pd; l++)
 	{
 		float *outl = out + w*h*l;
 		float *inl = in + w*h*l;
-		amle_recursive(outl, inl, guide, dist, w, h, niter, nscale, lambda, pd_guide, err_thresh, dist_type, nn_type, nn, nscale);
+		amle_recursive(outl, inl, guide, w, h, niter, nscale, lambda, pd_guide, err_thresh, w_type, nn_type, nn, nscale);
 	}
-
-	free(dist);
 }

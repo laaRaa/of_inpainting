@@ -27,10 +27,10 @@ int main(int argc, char *argv[])
 {
 	if (argc != 11) {
 		fprintf(stderr, "usage:\n\t"
-		"%s NS lambda err_threshold distance_type neighbourgood_type neighbourhood_ratio data.png mask.png out.png guide.png\n", *argv);
-		//0 1  2      3             4             5                  6                   7        8        9       10
+		"%s NS lambda err_threshold weight_type neighbourgood_type neighbourhood_ratio data.png mask.png out.png guide.png\n", *argv);
+		//0 1  2      3             4           5                  6                   7        8        9       10
                 fprintf(stderr, "\n");
-                fprintf(stderr, "distance_type = 1, 2, 3 or 4\n");
+                fprintf(stderr, "weight_type = 1, 2, 3 or 4\n");
                 fprintf(stderr, "neighbourhood_type = 1 or 2\n");
                 fprintf(stderr, "neighbourhood_ratio = 1, 2, 3, 4 or 5\n");
 		return 1;
@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 	int nscales = atoi(argv[1]);
 	float lambda = atof(argv[2]);
         float err_thresh = atof(argv[3]);
-        int dist_type = atoi(argv[4]);
+        int w_type = atoi(argv[4]);
         int nn_type = atoi(argv[5]);
 	int r = atoi(argv[6]);
 	char *filename_in = argv[7];
@@ -47,13 +47,13 @@ int main(int argc, char *argv[])
 	char *filename_out = argv[9];
 	char *filename_guide = argv[10];
 
-	// check distance type validity
-	if (dist_type<1 || dist_type>4)
-		return printf("The distance type should be 1, 2, 3 or 4\n");
+	// check weight type validity
+	if (w_type<1 || w_type>4)
+	  return printf("The weight type should be 1, 2, 3 or 4\n");
 
 	// check neighbourhood type validity
 	if (nn_type<1 || nn_type>2)
-		return printf("The neighbourhood type should be  1 or 2\n");
+	  return printf("The neighbourhood type should be  1 or 2\n");
 
 	// set neighbourhood size given a valid dx
 	// ...
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 			for (int l = 0; l < *pd; l++)
 				in[*w**h*l+i] = NAN;
 		}
-	amle_recursive_separable(out, in, guide, *w, *h, pd[0], pd[2], niter, nscales, lambda, err_thresh, dist_type, nn_type, nn);
+	amle_recursive_separable(out, in, guide, *w, *h, pd[0], pd[2], niter, nscales, lambda, err_thresh, w_type, nn_type, nn);
 
 
 	// compute EPE between input flow and output flow
