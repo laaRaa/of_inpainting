@@ -1,5 +1,6 @@
-/* Copyright (c) 2019 Lara Raad <lara.raad@upf.edu>,
-			     <enric.meinhardt@cmla.ens-cachan.fr>
+/* 
+Modified version: Copyright (c) 2019 Lara Raad <lara.raad@upf.edu>,
+Original version: Copyright (c) 2017 Enric Meinhardt-Llopis <enric.meinhardt@cmla.ens-cachan.fr>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as
@@ -12,7 +13,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU Affero General Public License for more details.
 
 You should have received a copy of the GNU Affero General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>. */
+along with this program. If not, see <http://www.gnu.org/licenses/>. 
+*/
 
 #include <assert.h>
 #include <math.h>

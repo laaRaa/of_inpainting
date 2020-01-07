@@ -1,6 +1,7 @@
 On anisotropic optical flow inpainting algorithms
 Version 1.0 26/09/2019
 Lara Raad (lara.raad@upf.edu)
+Enric Meinhardt (enric.meinhardt@cmla.ens-cachan.fr)
 
 README file for two optical flow inpainting algorithms using the AMLE and
 Laplace-Beltrami operators on a 2D Riemannian manifold.

@@ -1,5 +1,5 @@
 % Copyright (c) 2019 Lara Raad <lara.raad@upf.edu>,
-%			       <enric.meinhardt@cmla.ens-cachan.fr>
+% Enric Meinhardt-Llopis <enric.meinhardt@cmla.ens-cachan.fr>
 %
 % This program is free software: you can redistribute it and/or modify
 % it under the terms of the GNU Affero General Public License as
