@@ -382,12 +382,11 @@ static void compute_weight_1(float *weight, float *u, int w, int h, int pd, floa
         if (ii >= 0 && jj >= 0 && ii < w && jj < h)
         {
           weight[j*w+i+h*w*p] = 0;
-	  float a = 0;
-	  float b = (ii-i)*(ii-i) + (jj-j)*(jj-j);
+	  float d = 0;
           for (int l=0; l<pd; l++)
-            a += (u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l])*(u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l]);
-	  a /= pd;
-          weight[j*w+i+h*w*p] = 1/(sqrt((1-lambda)*a + lambda*b));
+            d += (u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l])*(u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l]);
+	  d /= pd;
+          weight[j*w+i+h*w*p] = 1/(sqrt((1-lambda)*d + lambda*((ii-i)*(ii-i) + (jj-j)*(jj-j))));
         }
         if (ii < 0 || jj < 0 || ii >= w || jj >= h)
           weight[j*w+i+h*w*p] = -1;
@@ -412,13 +411,12 @@ static void compute_weight_2(float *weight, float *u, int w, int h, int pd, floa
         int jj = j + n[p][1];
         if (ii >= 0 && jj >= 0 && ii < w && jj < h)
         {
-	  float a = 0;
-	  float b = sqrt((ii-i)*(ii-i) + (jj-j)*(jj-j));
+	  float d = 0;
           for (int l=0; l<pd; l++)
-            a += (u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l])*(u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l]);
-	  a /= pd;
-	  a = sqrt(a);
-          weight[j*w+i+h*w*p] = 1/((1-lambda)*a + lambda*b);
+            d += (u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l])*(u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l]);
+	  d /= pd;
+	  d = sqrt(d);
+          weight[j*w+i+h*w*p] = 1/((1-lambda)*d + lambda*sqrt((ii-i)*(ii-i) + (jj-j)*(jj-j)));
         }
         if (ii < 0 || jj < 0 || ii >= w || jj >= h)
           weight[j*w+i+h*w*p] = -1;
@@ -443,12 +441,11 @@ static void compute_weight_3(float *weight, float *u, int w, int h, int pd, floa
         int jj = j + n[p][1];
         if (ii >= 0 && jj >= 0 && ii < w && jj < h)
         {
-	  float a = 0;
-	  float b = (ii-i)*(ii-i) + (jj-j)*(jj-j);
+	  float d = 0;
           for (int l=0; l<pd; l++)
-            a += (u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l])*(u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l]);
-	  a /= pd;
-	  weight[j*w+i+h*w*p] = 1/((1-lambda)*a + lambda*b);
+            d += (u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l])*(u[jj*w+ii+w*h*l]-u[j*w+i+w*h*l]);
+	  d /= pd;
+	  weight[j*w+i+h*w*p] = 1/((1-lambda)*d + lambda*((ii-i)*(ii-i) + (jj-j)*(jj-j)));
         }
         if (ii < 0 || jj < 0 || ii >= w || jj >= h)
           weight[j*w+i+h*w*p] = -1;
@@ -477,15 +474,14 @@ static void compute_weight_4(float *weight, float *u, int w, int h, int pd, floa
         int jj = j + n[p][1];
 	if (ii >= 0 && jj >= 0 && ii < w && jj < h)
         {
-          float a = 0;
+          float d = 0;
           for (int l=0; l<pd; l++)
             for (int m=-(s-1)/2; m<= (s-1)/2; m++)
 	      for (int n=-(s-1)/2; n<= (s-1)/2; n++)
 		if (jj+n>=0 && jj+n<h && ii+m>=0 && ii+m<w && j+n>=0 && j+n<h && i+m>=0 && i+m<w)
-		  a += (u[(jj+n)*w+(ii+m)+w*h*l]-u[(j+n)*w+(i+m)+w*h*l])*(u[(jj+n)*w+(ii+m)+w*h*l]-u[(j+n)*w+(i+m)+w*h*l]);
-          a = a/s/s/pd; // normalize by the number of pixels in a patch
-          float b = (ii-i)*(ii-i) + (jj-j)*(jj-j);
-          weight[j*w+i+h*w*p] = 1/((1-lambda)*a + lambda*b);
+		  d += (u[(jj+n)*w+(ii+m)+w*h*l]-u[(j+n)*w+(i+m)+w*h*l])*(u[(jj+n)*w+(ii+m)+w*h*l]-u[(j+n)*w+(i+m)+w*h*l]);
+          d = d/s/s/pd; // normalize by the number of pixels in a patch
+          weight[j*w+i+h*w*p] = 1/((1-lambda)*d + lambda*((ii-i)*(ii-i) + (jj-j)*(jj-j)));
         }
         if (ii < 0 || jj < 0 || ii >= w || jj >= h)
           weight[j*w+i+h*w*p] = -1;
