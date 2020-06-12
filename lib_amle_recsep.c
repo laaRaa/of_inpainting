@@ -289,8 +289,6 @@ static void amle_extension(
 		count += 1;
 	}
 
-	printf("niter %d, e_k %g\n", count, e_k);
-
 	free(mask);
 	free(y_old);
 }

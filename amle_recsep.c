@@ -130,7 +130,6 @@ int main(int argc, char *argv[])
 		if (mask[i] > 0)
 			diff += sqrt((in_copy[i]-out[i])*(in_copy[i]-out[i]) + (in_copy[i+*w**h]-out[i+*w**h])*(in_copy[i+*w**h]-out[i+*w**h])) ;
 	float EPE = diff/num_pixels_to_inpaint;
-	printf("%f\n",EPE);
 
 	iio_write_image_float_split(filename_out, out, *w, *h, *pd);
 
