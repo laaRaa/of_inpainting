@@ -21,6 +21,10 @@
 function inpaint_OF_with_laplace_beltrami_flow_interpolation(flow_in,...
                                           guide, mask, lambda, w, flow_out)
 
+% values of lambda and w are chars --> convert to double
+lambda = str2double(lambda);
+w = str2double(w);
+                                      
 kappa = im2double(imread(mask)); % read inpainting mask
 kappa = kappa(:,:,1); % 
 kappa(kappa~=0) = 1; % values ~= 0 are pixels to inpaint
