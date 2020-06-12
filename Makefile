@@ -7,7 +7,7 @@ MINTERP = octave
 
 # variables
 OBJ     = lib_amle_recsep.o iio.o
-BIN     = amle_recsep
+BIN     = amle_recsep viewflow
 
 # default target
 default: $(BIN)
